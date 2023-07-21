@@ -67,7 +67,7 @@ class Normal(User):
     
     base_role = User.Role.NORMAL
     
-    objects = NormalManager()
+    normal = NormalManager()
     
     @property
     def profile(self):
@@ -99,7 +99,7 @@ class Company(User):
     
     base_role = User.Role.COMPANY
     
-    objects = CompanyManager()
+    company = CompanyManager()
     
     @property
     def profile(self):
