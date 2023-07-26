@@ -1,4 +1,7 @@
 from django.db import models
+
+# Create your models here.
+from django.db import models
 from django.contrib.auth.models import AbstractUser,BaseUserManager
 from django.db.models.query import QuerySet
 from django.db.models.signals import post_save
@@ -21,6 +24,14 @@ class User(AbstractUser):
             self.role = self.base_role
             return super().save(*args,**kwargs)
  
+@receiver(post_save, sender=User)
+def create_user_profile(sender, instance, created, **kwargs):
+    if created and instance.role == "ADMIN":
+        Profile.objects.bulk_create(
+            [Profile(user=instance,meta_key="name"),
+             Profile(user=instance,meta_key="IsAdmin",meta_value="true")]
+            ) 
+ 
 class NormalManager(BaseUserManager):
     def get_queryset(self,*args,**kwargs):
         result = super().get_queryset(*args,**kwargs).filter(role=User.Role.NORMAL)
@@ -32,25 +43,17 @@ class Normal(User):
     
     normal = NormalManager()
     
-    @property
-    def profile(self):
-        return self.normalprofile
-    
     class Meta:
         proxy = True
 
 @receiver(post_save, sender=Normal)
 def create_user_profile(sender, instance, created, **kwargs):
     if created and instance.role == "NORMAL":
-        NormalProfile.objects.create(user=instance)
-
-class NormalProfile(models.Model):
-    user = models.OneToOneField(User,on_delete=models.CASCADE)
-    name = models.CharField(max_length=100,null=True,blank=True)
-    wallet = models.PositiveBigIntegerField(editable=False,default=0)
-    carbonProduce = models.DecimalField(max_digits=20,decimal_places=4,default=0.0000)
-
-    
+        Profile.objects.bulk_create(
+            [Profile(user=instance,meta_key="name"),
+             Profile(user=instance,meta_key="wallet",meta_value=0),
+             Profile(user=instance,meta_key="carbonProduce",meta_value=0.0000)]
+            ) 
 
 class CompanyManager(BaseUserManager):
     def get_queryset(self,*args,**kwargs):
@@ -63,21 +66,20 @@ class Company(User):
     
     company = CompanyManager()
     
-    @property
-    def profile(self):
-        return self.companyprofile
-    
     class Meta:
         proxy = True
 
 @receiver(post_save, sender=Company)
 def create_user_profile(sender, instance, created, **kwargs):
     if created and instance.role == "COMPANY":
-        CompanyProfile.objects.create(user=instance)
+        Profile.objects.bulk_create(
+            [Profile(user=instance,meta_key="companyName"),
+             Profile(user=instance,meta_key="address"),
+             Profile(user=instance,meta_key="vatNumber"),
+             Profile(user=instance,meta_key="chairman")]
+            )
 
-class CompanyProfile(models.Model):
-    user = models.OneToOneField(User,on_delete=models.CASCADE)
-    companyName = models.CharField(max_length=100,null=True,blank=True)
-    address = models.CharField(max_length=255,null=True,blank=True)
-    vitNumber = models.CharField(max_length = 8, unique = True, default = "00000000", primary_key=True)
-    chairman = models.CharField(max_length=50,null=True,blank=True)
+class Profile(models.Model):
+    user = models.ForeignKey(User,on_delete=models.CASCADE)
+    meta_key = models.CharField(max_length=50)
+    meta_value = models.CharField(max_length=255,null=True,blank=True)
