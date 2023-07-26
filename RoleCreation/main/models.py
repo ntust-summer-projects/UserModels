@@ -7,14 +7,6 @@ from django.db.models.query import QuerySet
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 # Create your models here.
-class NormalManager(BaseUserManager):
-    def get_queryset(self,*args,**kwargs):
-        result = super().get_queryset(*args,**kwargs).filter(role=User.Role.NORMAL)
-        return result
-class CompanyManager(BaseUserManager):
-    def get_queryset(self,*args,**kwargs):
-        result = super().get_queryset(*args,**kwargs).filter(role = User.Role.COMPANY)
-        return result
 class User(AbstractUser):
     class Role(models.TextChoices):
         ADMIN = "ADMIN", 'Admin'
@@ -27,10 +19,6 @@ class User(AbstractUser):
     
     role = models.CharField(max_length=50, choices=Role.choices,default = Role.ADMIN)
     
-    company = CompanyManager()
-    
-    normal = NormalManager()
- 
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
     if created and instance.role == "ADMIN" or 'Admin':
